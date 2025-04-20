@@ -14,37 +14,18 @@ export const environmentSchema = z.object({
 // Type for the validated environment variables
 type EnvVars = z.infer<typeof environmentSchema>;
 
-// RCON client singleton
+// RCON client optimized for edge runtime
 class RconClient {
-  private static instance: RconClient | null = null;
   private client: Rcon | null = null;
   private env: EnvVars | null = null;
-  private lastUsedTime: number = 0;
   private connectionTimeout: number = 15000; // 15 seconds connection timeout
   private commandTimeout: number = 5000; // 5 seconds command timeout
 
-  private constructor() {}
-
-  public static getInstance(): RconClient {
-    if (!RconClient.instance) {
-      RconClient.instance = new RconClient();
-    }
-    return RconClient.instance;
-  }
+  constructor() {}
 
   public async connect(): Promise<void> {
-    const currentTime = Date.now();
-
-    // Check if we need to refresh the connection
     if (this.client) {
-      // If connection is older than the timeout or seems stale, refresh it
-      if (currentTime - this.lastUsedTime > this.connectionTimeout) {
-        await this.disconnect();
-      } else {
-        // Connection is still fresh
-        this.lastUsedTime = currentTime;
-        return;
-      }
+      return;
     }
 
     try {
@@ -62,8 +43,6 @@ class RconClient {
         password: this.env.RCON_PASSWORD,
         timeout: this.commandTimeout, // Use a reasonable timeout for commands
       });
-
-      this.lastUsedTime = currentTime;
     } catch (error) {
       console.error("Failed to connect to RCON server:", error);
       this.client = null;
@@ -90,9 +69,6 @@ class RconClient {
         await this.connect();
       }
 
-      // Update last used time
-      this.lastUsedTime = Date.now();
-
       // Add timeout handling
       const result = (await Promise.race([
         this.client!.send(command),
@@ -118,6 +94,9 @@ class RconClient {
         console.error(`Retry failed for command "${command}":`, retryError);
         throw retryError;
       }
+    } finally {
+      // Always disconnect after command completes in edge environment
+      await this.disconnect();
     }
   }
 
@@ -199,4 +178,80 @@ class RconClient {
   }
 }
 
-export const rcon = RconClient.getInstance();
+// Preserve the export interface while creating a new instance for each request
+export const rcon = {
+  say: async (message: string): Promise<string> => {
+    const client = new RconClient();
+    return client.say(message);
+  },
+  kick: async (player: string, reason?: string): Promise<string> => {
+    const client = new RconClient();
+    return client.kick(player, reason);
+  },
+  ban: async (player: string, reason?: string): Promise<string> => {
+    const client = new RconClient();
+    return client.ban(player, reason);
+  },
+  banIp: async (ip: string, reason?: string): Promise<string> => {
+    const client = new RconClient();
+    return client.banIp(ip, reason);
+  },
+  pardon: async (player: string): Promise<string> => {
+    const client = new RconClient();
+    return client.pardon(player);
+  },
+  pardonIp: async (ip: string): Promise<string> => {
+    const client = new RconClient();
+    return client.pardonIp(ip);
+  },
+  op: async (player: string): Promise<string> => {
+    const client = new RconClient();
+    return client.op(player);
+  },
+  deop: async (player: string): Promise<string> => {
+    const client = new RconClient();
+    return client.deop(player);
+  },
+  teleport: async (target: string, destination: string): Promise<string> => {
+    const client = new RconClient();
+    return client.teleport(target, destination);
+  },
+  give: async (
+    player: string,
+    item: string,
+    amount?: number
+  ): Promise<string> => {
+    const client = new RconClient();
+    return client.give(player, item, amount);
+  },
+  weather: async (type: "clear" | "rain" | "thunder"): Promise<string> => {
+    const client = new RconClient();
+    return client.weather(type);
+  },
+  time: async (setting: "day" | "night" | number): Promise<string> => {
+    const client = new RconClient();
+    return client.time(setting);
+  },
+  gamemode: async (
+    player: string,
+    mode: "survival" | "creative" | "adventure" | "spectator"
+  ): Promise<string> => {
+    const client = new RconClient();
+    return client.gamemode(player, mode);
+  },
+  whitelist: async (
+    action: "add" | "remove" | "list" | "on" | "off" | "reload",
+    player?: string
+  ): Promise<string> => {
+    const client = new RconClient();
+    return client.whitelist(action, player);
+  },
+  list: async (): Promise<string> => {
+    const client = new RconClient();
+    return client.list();
+  },
+  executeRaw: async (command: string): Promise<string> => {
+    const client = new RconClient();
+    return client.executeRaw(command);
+  },
+};
