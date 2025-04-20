@@ -65,9 +65,7 @@ class RconClient {
   // Generic command method
   private async sendCommand(command: string): Promise<string> {
     try {
-      if (!this.client) {
-        await this.connect();
-      }
+      await this.connect();
 
       // Add timeout handling
       const result = (await Promise.race([
