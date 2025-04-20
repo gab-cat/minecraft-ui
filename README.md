@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Minecraft Server Management UI
+
+A modern, stylish web application for managing your Minecraft server via RCON. This app provides an intuitive interface for sending commands and viewing server responses.
+
+## Features
+
+- **Modern UI** - Built with shadcn/ui for a beautiful, accessible interface
+- **RCON Integration** - Communicate with your Minecraft server using the RCON protocol
+- **User-Friendly Command Interface** - Easily send common commands without remembering syntax
+- **Server Response Display** - See server responses in real-time
+- **Organized Command Categories** - Commands are organized in intuitive tabs:
+  - Basic - Broadcast messages, list players
+  - Players - Kick, ban, pardon players
+  - Items - Give items, teleport players
+  - Settings - Game mode, weather, time controls
+  - Advanced - Execute raw commands
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20 or later
+- A Minecraft server with RCON enabled
+
+### RCON Setup on Your Minecraft Server
+
+1. Edit your Minecraft server's `server.properties` file
+2. Set the following properties:
+   ```
+   enable-rcon=true
+   rcon.port=25575
+   rcon.password=your_secure_password
+   ```
+3. Restart your Minecraft server
+
+### Installing the Application
+
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy `sample.env.local` to `.env.local` and update with your server details:
+   ```
+   RCON_HOST=your_minecraft_server_ip
+   RCON_PORT=25575
+   RCON_PASSWORD=your_rcon_password
+   ```
+
+### Running the Application
+
+#### Development Mode
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Production Mode
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+This application is built with Next.js and can be deployed to various platforms. The recommended deployment is using Vercel or Cloudflare Pages:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run deploy
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Technical Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Framework**: Next.js 15+
+- **UI Library**: shadcn/ui
+- **Data Fetching**: TanStack React Query
+- **Form Handling**: react-hook-form with Zod validation
+- **Minecraft Communication**: rcon-client
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The project follows a feature-based organization:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/` - Next.js app router pages
+- `src/features/` - Feature-specific components and logic
+- `src/lib/` - Shared utilities and configurations
+- `src/components/` - Reusable UI components
+
+## Extending the Application
+
+To add new commands or features:
+
+1. Add new command methods to `src/lib/rcon.ts`
+2. Create validation schemas in `src/app/api/actions.ts`
+3. Implement server actions for the new commands
+4. Add UI components in the appropriate feature folder
+
+## License
+
+This project is open source and available under the MIT License.
