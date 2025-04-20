@@ -19,6 +19,9 @@ class RconClient {
   private static instance: RconClient | null = null;
   private client: Rcon | null = null;
   private env: EnvVars | null = null;
+  private lastUsedTime: number = 0;
+  private connectionTimeout: number = 15000; // 15 seconds connection timeout
+  private commandTimeout: number = 5000; // 5 seconds command timeout
 
   private constructor() {}
 
@@ -30,9 +33,18 @@ class RconClient {
   }
 
   public async connect(): Promise<void> {
+    const currentTime = Date.now();
+
+    // Check if we need to refresh the connection
     if (this.client) {
-      // Already connected
-      return;
+      // If connection is older than the timeout or seems stale, refresh it
+      if (currentTime - this.lastUsedTime > this.connectionTimeout) {
+        await this.disconnect();
+      } else {
+        // Connection is still fresh
+        this.lastUsedTime = currentTime;
+        return;
+      }
     }
 
     try {
@@ -43,31 +55,70 @@ class RconClient {
         RCON_PASSWORD: getCloudflareContext().env.RCON_PASSWORD,
       });
 
+      // Create a new RCON client with timeout options
       this.client = await Rcon.connect({
         host: this.env.RCON_HOST,
         port: this.env.RCON_PORT,
         password: this.env.RCON_PASSWORD,
+        timeout: this.commandTimeout, // Use a reasonable timeout for commands
       });
+
+      this.lastUsedTime = currentTime;
     } catch (error) {
-      console.log(this.env);
       console.error("Failed to connect to RCON server:", error);
+      this.client = null;
       throw error;
     }
   }
 
   public async disconnect(): Promise<void> {
     if (this.client) {
-      await this.client.end();
-      this.client = null;
+      try {
+        await this.client.end();
+      } catch (error) {
+        console.error("Error disconnecting from RCON server:", error);
+      } finally {
+        this.client = null;
+      }
     }
   }
 
   // Generic command method
   private async sendCommand(command: string): Promise<string> {
-    if (!this.client) {
-      await this.connect();
+    try {
+      if (!this.client) {
+        await this.connect();
+      }
+
+      // Update last used time
+      this.lastUsedTime = Date.now();
+
+      // Add timeout handling
+      const result = (await Promise.race([
+        this.client!.send(command),
+        new Promise<string>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Command timeout: ${command}`));
+          }, this.commandTimeout);
+        }),
+      ])) as string;
+
+      return result;
+    } catch (error) {
+      console.error(`Error executing command "${command}":`, error);
+
+      // Reset connection if there was an error
+      await this.disconnect();
+
+      // Try to reconnect and retry once
+      try {
+        await this.connect();
+        return await this.client!.send(command);
+      } catch (retryError) {
+        console.error(`Retry failed for command "${command}":`, retryError);
+        throw retryError;
+      }
     }
-    return this.client!.send(command);
   }
 
   // Specific command methods
